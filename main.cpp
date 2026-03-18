@@ -12,20 +12,14 @@ using namespace std;
 
 struct Token {
     string value;   // number, operator, or parenthesis
+    Token() = default;
+    Token(string value) : value(value) {}
 };
-
-// Tokenizer
-
-vector<Token> tokenize(const string& line) {
-    vector<Token> tokens;
-    // TODO
-    return tokens;
-}
 
 // Helpers
 
-bool isOperator(const string& s) {
-    return s == "+" || s == "-" || s == "*" || s == "/";
+bool isOperator(const char s) {
+    return s == '+' || s == '-' || s == '*' || s == '/';
 }
 
 int precedence(const string& op) {
@@ -59,6 +53,31 @@ double evalPostfix(const vector<Token>& tokens) {
     ArrayStack<double> stack;
     // TODO
     return 0.0;
+}
+
+// Tokenizer
+
+vector<Token> tokenize(const string& line) {
+    vector<Token> tokens;
+    int i = 0;
+    while (i < line.length()) {
+        if (isspace(line[i]));
+        else if (isOperator(line[i])) {
+            tokens.push_back(Token(line.substr(i, 1)));
+        }
+        else if (isdigit(line[i])) {
+            int j = 1;
+            while (isdigit(line[i + j])) {
+                j++;
+            }
+            tokens.push_back(Token(line.substr(i, j)));
+            i+=j-1;
+        }else {
+            cout << "Error at: " << line.substr(i) << "\n";
+        }
+        i++;
+    }
+    return tokens;
 }
 
 // Main
