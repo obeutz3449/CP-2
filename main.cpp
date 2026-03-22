@@ -13,7 +13,7 @@ using namespace std;
 struct Token {
     string value;   // number, operator, or parenthesis
     Token() = default;
-    Token(string value) : value(value) {}
+    Token(const string &value) : value(value) {}
 };
 
 // Helpers
@@ -36,81 +36,83 @@ bool isValidPostfix(const vector<Token>& tokens) {
 }
 
 bool isValidInfix(const vector<Token>& tokens) {
+    int priority = 0;
     bool isOp = false;
     for (const auto &token : tokens) {
-        if ((isOperator(token.value[0])) == isOp) return false;
-        isOp = !isOp;
+        if (isOperator(token.value[0]) == isOp) return false;
+        if (token.value[0] == '(') {
+            priority++;
+        }else if (token.value[0] == ')') {
+            priority--;
+            if (priority < 0) return false;
+        }
+        isOp = !isOp && priority == 0;
     }
     return !isOp;
 }
 
-    // Conversion
+// Conversion
 
-    vector<Token> infixToPostfix(const vector<Token>& tokens) {
-        vector<Token> output;
-        // TODO
-        return output;
-    }
+vector<Token> infixToPostfix(const vector<Token>& tokens) {
+    vector<Token> output;
+    // TODO
+    return output;
+}
 
-    // Evaluation
+// Evaluation
 
-    double evalPostfix(const vector<Token>& tokens) {
-        ArrayStack<double> stack;
-        // TODO
-        return 0.0;
-    }
+double evalPostfix(const vector<Token>& tokens) {
+    ArrayStack<double> stack;
+    // TODO
+    return 0.0;
+}
 
-    // Tokenizer
+// Tokenizer
 
-    vector<Token> tokenize(const string& line) {
-        vector<Token> tokens;
-        int i = 0;
-        while (i < line.length()) {
-            if (isspace(line[i]));
-            else if (isOperator(line[i])) {
-                tokens.push_back(Token(line.substr(i, 1)));
+vector<Token> tokenize(const string& line) {
+    vector<Token> tokens;
+    int i = 0;
+    while (i < line.length()) {
+        if (isspace(line[i]));
+        else if (isOperator(line[i])) tokens.push_back(Token(line.substr(i, 1)));
+        else if (isdigit(line[i])) {
+            int j = 1;
+            while (isdigit(line[i + j])) {
+                j++;
             }
-            else if (isdigit(line[i])) {
-                int j = 1;
-                while (isdigit(line[i + j])) {
-                    j++;
-                }
-                tokens.push_back(Token(line.substr(i, j)));
-                i+=j-1;
-            }else {
-                cout << "Error at: " << line.substr(i) << "\n";
-            }
-            i++;
+            tokens.push_back(Token(line.substr(i, j)));
+            i+=j-1;
+        }else cout << "Error at: " << line.substr(i) << "\n";
+        i++;
+    }
+    return tokens;
+}
+
+// Main
+
+int main() {
+    string line;
+    getline(cin, line);
+
+    vector<Token> tokens = tokenize(line);
+
+    if (isValidPostfix(tokens)) {
+        cout << "FORMAT: POSTFIX\n";
+        cout << "RESULT: " << evalPostfix(tokens) << "\n";
+    }
+    else if (isValidInfix(tokens)) {
+        vector<Token> postfix = infixToPostfix(tokens);
+        cout << "FORMAT: INFIX\n";
+        cout << "POSTFIX: ";
+        for (const auto& t : postfix) {
+            cout << t.value << " ";
         }
-        return tokens;
+        cout << "\n";
+        cout << "RESULT: " << evalPostfix(postfix) << "\n";
+    }else {
+        cout << "FORMAT: NEITHER\n";
+        cout << "ERROR: invalid expression\n";
     }
 
-    // Main
-
-    int main() {
-        string line;
-        getline(cin, line);
-
-        vector<Token> tokens = tokenize(line);
-
-        if (isValidPostfix(tokens)) {
-            cout << "FORMAT: POSTFIX\n";
-            cout << "RESULT: " << evalPostfix(tokens) << "\n";
-        }
-        else if (isValidInfix(tokens)) {
-            vector<Token> postfix = infixToPostfix(tokens);
-            cout << "FORMAT: INFIX\n";
-            cout << "POSTFIX: ";
-            for (const auto& t : postfix) {
-                cout << t.value << " ";
-            }
-            cout << "\n";
-            cout << "RESULT: " << evalPostfix(postfix) << "\n";
-        }
-        else {
-            cout << "FORMAT: NEITHER\n";
-            cout << "ERROR: invalid expression\n";
-        }
-
-        return 0;
-    }
+    return 0;
+}
