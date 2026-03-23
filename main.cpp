@@ -22,6 +22,21 @@ bool isOperator(const char s) {
     return s == '+' || s == '-' || s == '*' || s == '/';
 }
 
+bool isOperator(const Token &t) {
+    return t.value.length() == 1 && isOperator(t.value[0]);
+}
+
+bool isNumber(const string &s) {
+    for (const auto &c : s) {
+        if (!isdigit(c)) return false;
+    }
+    return true;
+}
+
+bool isNumber(const Token &t) {
+    return isNumber(t.value);
+}
+
 int precedence(const string& op) {
     // TODO
     // so what is this?
@@ -31,21 +46,29 @@ int precedence(const string& op) {
 // Detection
 
 bool isValidPostfix(const vector<Token>& tokens) {
-    // TODO
-    return false;
+    int operators = 0;
+    int numbers = 0;
+    if (isNumber(tokens.at(tokens.size() - 1)) && isNumber(tokens.at(tokens.size() - 2))) {
+        for (const auto &token : tokens) {
+            if (isOperator(token.value[0])) operators++;
+            else if (isNumber(token.value)) numbers++;
+            else return false;
+        }
+    }else return false;
+    return numbers == operators + 1;
 }
 
 bool isValidInfix(const vector<Token>& tokens) {
     int priority = 0;
     bool isOp = false;
     for (const auto &token : tokens) {
-        if (isOperator(token.value[0]) == isOp) return false;
-        if (token.value[0] == '(') {
+        if (isOperator(token) == isOp) return false;
+        if (token.value.length() == 1 && token.value[0] == '(') {
             priority++;
-        }else if (token.value[0] == ')') {
+        }else if (token.value.length() == 1 && token.value[0] == ')') {
             priority--;
             if (priority < 0) return false;
-        }
+        }else if (!isOperator(token) && !isNumber(token)) return false;
         isOp = !isOp && priority == 0;
     }
     return !isOp;
