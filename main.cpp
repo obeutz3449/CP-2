@@ -100,12 +100,19 @@ vector<Token> tokenize(const string& line) {
         else if (isOperator(line[i])) tokens.push_back(Token(line.substr(i, 1)));
         else if (isdigit(line[i])) {
             int j = 1;
-            while (isdigit(line[i + j])) {
-                j++;
+            while (line[i + j] != ' ' && i + j < line.length()) j++;
+            if (!tokens.empty() && (tokens.at(tokens.size() - 1)).value == ")") {
+                tokens.push_back(Token("*"));
             }
-            tokens.push_back(Token(line.substr(i, j)));
+            tokens.push_back(Token(line.substr(i, j-1)));
             i+=j-1;
-        }else cout << "Error at: " << line.substr(i) << "\n";
+        }else if (line[i] == '(') {
+            if (!tokens.empty() && isNumber(tokens.at(tokens.size() - 1))) {
+                tokens.push_back(Token("*"));
+            }
+            tokens.push_back(Token("("));
+        }else if (line[i] == ')') tokens.push_back(Token(")"));
+        else cout << "Error at: " << line.substr(i) << "\n";
         i++;
     }
     return tokens;
