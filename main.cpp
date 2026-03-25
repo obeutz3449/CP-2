@@ -79,6 +79,14 @@ bool isValidInfix(const vector<Token>& tokens) {
 vector<Token> infixToPostfix(const vector<Token>& tokens) {
     vector<Token> output;
     // TODO
+    int i, j;
+    for (i = 0; i < tokens.size() && tokens.at(i).value != "("; i++);
+    for (j = tokens.size() - 1 - i; j > 0 && tokens.at(i + j).value != "("; j--);
+    if (i != j) {
+        vector<Token> vect = vector<Token>();
+        for (int k = 0; k < i; k++) vect.push_back(tokens.at(k));
+        for (int k = j + 1; k < tokens.size(); k++) vect.push_back(tokens.at(k));
+    }
     return output;
 }
 
