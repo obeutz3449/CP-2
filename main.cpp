@@ -76,18 +76,61 @@ bool isValidInfix(const vector<Token>& tokens) {
 
 // Conversion
 
+vector<Token>& subVector(const vector<Token>& tokens, int start, int end) {
+    vector<Token> subtokens;
+    for (int i = start; i < end; i++) subtokens.push_back(tokens.at(i));
+    return subtokens;
+}
+
+vector<Token>& subVector(const vector<Token>& tokens, int start) {
+    return subVector(tokens, start, tokens.size() - 1);
+}
+
 vector<Token> infixToPostfix(const vector<Token>& tokens) {
-    vector<Token> output;
-    // TODO
-    int i, j;
-    for (i = 0; i < tokens.size() && tokens.at(i).value != "("; i++);
-    for (j = tokens.size() - 1 - i; j > 0 && tokens.at(i + j).value != "("; j--);
-    if (i != j) {
-        vector<Token> vect = vector<Token>();
-        for (int k = 0; k < i; k++) vect.push_back(tokens.at(k));
-        for (int k = j + 1; k < tokens.size(); k++) vect.push_back(tokens.at(k));
+    Token op;
+    ArrayStack<Token> ops = ArrayStack<Token>();
+    vector<Token> postfix = vector<Token>();
+    for (const auto &token : tokens) if (isOperator(token) || token.value == "(") {
+            op = token;
+            break;
     }
-    return output;
+    int i = 0;
+    switch (op.value[0]) {
+        case '+': case '-': {
+            for (i = 0; i < tokens.size(); i++) {
+                if (isOperator(tokens.at(i))) {
+                    if (op.value[0] == '+' || op.value[0] == '-') ops.push(tokens.at(i));
+                    else break;
+                }else if (isNumber(tokens.at(i))) postfix.push_back(tokens.at(i));
+                else break;
+            }
+            break;
+        }
+        case '*': case '/': {
+            for (i = 0; i < tokens.size(); i++) {
+                if (isOperator(tokens.at(i))) {
+                    if (op.value[0] == '*' || op.value[0] == '/') ops.push(tokens.at(i));
+                    else break;
+                }else postfix.push_back(tokens.at(i));
+            }
+            break;
+        }
+        case '(': {
+            int priority = 1;
+            for (i = 1; i < tokens.size() && priority > 0; i++){
+                if (tokens.at(i).value[0] == '(') priority++;
+                else if (tokens.at(i).value[0] == ')') priority--;
+            }
+            for (const auto &token : infixToPostfix(subVector(tokens, 1, i - 1))) postfix.push_back(token);
+            break;
+        }
+        default: {
+            cout << "Something went wrong. Can't understand " << op.value << "\n";
+            return vector<Token>();
+        }
+    }
+    for (const auto &token : infixToPostfix(subVector(tokens, i))) postfix.push_back(token);
+    return postfix;
 }
 
 // Evaluation
