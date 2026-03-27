@@ -11,26 +11,25 @@ private:
 
 public:
     void push(const T& value) {
-        // TODO
+        data.push_back(value);
     }
 
-    void pop() {
-        // TODO
+    T pop() {
+        if (data.empty()) return nullptr;
+        return data.pop_back();
     }
 
     T top() const {
-        // TODO
-        return T();
+        if (data.empty()) return nullptr;
+        return data.at(data.size() - 1);
     }
 
     bool empty() const {
-        // TODO
-        return true;
+        return data.empty();
     }
 
     int size() const {
-        // TODO
-        return 0;
+        return data.size();
     }
 };
 
