@@ -24,11 +24,11 @@ public:
         return data.at(data.size() - 1);
     }
 
-    bool empty() const {
+    [[nodiscard]] bool empty() const {
         return data.empty();
     }
 
-    int size() const {
+    [[nodiscard]] int size() const {
         return data.size();
     }
 };

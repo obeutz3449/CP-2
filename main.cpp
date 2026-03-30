@@ -62,7 +62,7 @@ bool isValidInfix(const vector<Token>& tokens) {
     int priority = 0;
     bool isOp = false;
     for (const auto &token : tokens) {
-        if (isOperator(token) == isOp) return false;
+        if (isOperator(token) != isOp) return false;
         if (token.value.length() == 1 && token.value[0] == '(') {
             priority++;
         }else if (token.value.length() == 1 && token.value[0] == ')') {
@@ -71,25 +71,26 @@ bool isValidInfix(const vector<Token>& tokens) {
         }else if (!isOperator(token) && !isNumber(token)) return false;
         isOp = !isOp && priority == 0;
     }
-    return !isOp;
+    return isOp;
 }
 
 // Conversion
 
 vector<Token>& subVector(const vector<Token>& tokens, int start, int end) {
-    vector<Token> subtokens;
-    for (int i = start; i < end; i++) subtokens.push_back(tokens.at(i));
-    return subtokens;
+    vector<Token>* subtokens = new vector<Token>();
+    for (int i = start; i < end; i++) subtokens->push_back(tokens.at(i));
+    return *subtokens;
 }
 
 vector<Token>& subVector(const vector<Token>& tokens, int start) {
-    return subVector(tokens, start, tokens.size() - 1);
+    return subVector(tokens, start, tokens.size());
 }
 
 vector<Token> infixToPostfix(const vector<Token>& tokens) {
     Token op;
     ArrayStack<Token> ops = ArrayStack<Token>();
     vector<Token> postfix = vector<Token>();
+    if (tokens.empty()) return postfix;
     for (const auto &token : tokens) if (isOperator(token) || token.value == "(") {
             op = token;
             break;
@@ -155,7 +156,7 @@ vector<Token> tokenize(const string& line) {
             if (!tokens.empty() && (tokens.at(tokens.size() - 1)).value == ")") {
                 tokens.push_back(Token("*"));
             }
-            tokens.push_back(Token(line.substr(i, j-1)));
+            tokens.push_back(Token(line.substr(i, j)));
             i+=j-1;
         }else if (line[i] == '(') {
             if (!tokens.empty() && isNumber(tokens.at(tokens.size() - 1))) {
