@@ -15,12 +15,14 @@ public:
     }
 
     T pop() {
-        if (data.empty()) return nullptr;
-        return data.pop_back();
+        //if (data.empty()) return nullptr;
+        T value = data.at(data.size() - 1);
+        data.pop_back();
+        return value;
     }
 
     T top() const {
-        if (data.empty()) return nullptr;
+        //if (data.empty()) return nullptr;
         return data.at(data.size() - 1);
     }
 

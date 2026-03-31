@@ -37,18 +37,49 @@ bool isNumber(const Token &t) {
     return isNumber(t.value);
 }
 
-int precedence(const string& op) {
-    // TODO
-    // so what is this?
-    return 0;
+vector<Token>& subVector(const vector<Token>& tokens, int start, int end) {
+    auto* subtokens = new vector<Token>(end - start);
+    for (int i = start; i < end; i++) subtokens->at(i - start) = tokens.at(i);
+    return *subtokens;
+}
+
+vector<Token>& subVector(const vector<Token>& tokens, int start) {
+    return subVector(tokens, start, tokens.size());
+}
+
+int precedence(const vector<Token>& tokens) {
+    if (tokens.empty()) return -1;
+    int depth = 0;
+    int priority = 0;
+    for (const auto &token : tokens) {
+        if (token.value.length() == 1 && token.value[0] == '(') {
+            priority++;
+            depth = max(depth, priority);
+        }else if (token.value.length() == 1 && token.value[0] == ')') priority--;
+    }
+    if (priority != 0) return -1;
+    for (int p = 0; p <= depth; p++) {
+        for (int i = 0; i < tokens.size(); i++) {
+            if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == '(') priority++;
+            else if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == ')') priority--;
+            if (isOperator(tokens.at(i)) && priority == p && (tokens.at(i).value[0] == '+' || tokens.at(i).value[0] == '-')) return i;
+        }
+        for (int i = 0; i < tokens.size(); i++) {
+            if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == '(') priority++;
+            else if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == ')') priority--;
+            if (isOperator(tokens.at(i)) && priority == p && (tokens.at(i).value[0] == '*' || tokens.at(i).value[0] == '/')) return i;
+        }
+    }
+    return -1;
 }
 
 // Detection
 
 bool isValidPostfix(const vector<Token>& tokens) {
+    if (tokens.size() < 3) return false;
     int operators = 0;
     int numbers = 0;
-    if (isNumber(tokens.at(tokens.size() - 1)) && isNumber(tokens.at(tokens.size() - 2))) {
+    if (isNumber(tokens.at(0)) && isNumber(tokens.at(1))) {
         for (const auto &token : tokens) {
             if (isOperator(token.value[0])) operators++;
             else if (isNumber(token.value)) numbers++;
@@ -59,87 +90,82 @@ bool isValidPostfix(const vector<Token>& tokens) {
 }
 
 bool isValidInfix(const vector<Token>& tokens) {
+    if (tokens.size() < 3) return false;
     int priority = 0;
     bool isOp = false;
     for (const auto &token : tokens) {
-        if (isOperator(token) != isOp) return false;
-        if (token.value.length() == 1 && token.value[0] == '(') {
+        if (isNumber(token)) {
+            if (isOp) return false;
+            isOp = true;
+        }else if (isOperator(token)) isOp = false;
+        else if (token.value.length() == 1 && token.value[0] == '(') {
             priority++;
         }else if (token.value.length() == 1 && token.value[0] == ')') {
             priority--;
             if (priority < 0) return false;
-        }else if (!isOperator(token) && !isNumber(token)) return false;
-        isOp = !isOp && priority == 0;
+        }else return false;
     }
     return isOp;
 }
 
 // Conversion
 
-vector<Token>& subVector(const vector<Token>& tokens, int start, int end) {
-    vector<Token>* subtokens = new vector<Token>();
-    for (int i = start; i < end; i++) subtokens->push_back(tokens.at(i));
-    return *subtokens;
-}
-
-vector<Token>& subVector(const vector<Token>& tokens, int start) {
-    return subVector(tokens, start, tokens.size());
-}
-
-vector<Token> infixToPostfix(const vector<Token>& tokens) {
-    Token op;
-    ArrayStack<Token> ops = ArrayStack<Token>();
-    vector<Token> postfix = vector<Token>();
+vector<Token> infixToPostfix(vector<Token>& tokens) {
+    auto postfix = vector<Token>();
     if (tokens.empty()) return postfix;
-    for (const auto &token : tokens) if (isOperator(token) || token.value == "(") {
-            op = token;
-            break;
+    while (tokens.at(0).value[0] == '(' && tokens.at(tokens.size() - 1).value[0] == ')') {
+        tokens = subVector(tokens, 1, tokens.size() - 1);
     }
-    int i = 0;
-    switch (op.value[0]) {
-        case '+': case '-': {
-            for (i = 0; i < tokens.size(); i++) {
-                if (isOperator(tokens.at(i))) {
-                    if (op.value[0] == '+' || op.value[0] == '-') ops.push(tokens.at(i));
-                    else break;
-                }else if (isNumber(tokens.at(i))) postfix.push_back(tokens.at(i));
-                else break;
-            }
-            break;
-        }
-        case '*': case '/': {
-            for (i = 0; i < tokens.size(); i++) {
-                if (isOperator(tokens.at(i))) {
-                    if (op.value[0] == '*' || op.value[0] == '/') ops.push(tokens.at(i));
-                    else break;
-                }else postfix.push_back(tokens.at(i));
-            }
-            break;
-        }
-        case '(': {
-            int priority = 1;
-            for (i = 1; i < tokens.size() && priority > 0; i++){
-                if (tokens.at(i).value[0] == '(') priority++;
-                else if (tokens.at(i).value[0] == ')') priority--;
-            }
-            for (const auto &token : infixToPostfix(subVector(tokens, 1, i - 1))) postfix.push_back(token);
-            break;
-        }
-        default: {
-            cout << "Something went wrong. Can't understand " << op.value << "\n";
-            return vector<Token>();
-        }
+    if (tokens.empty()) return postfix;
+    if (tokens.size() == 1) {
+        postfix.push_back(tokens.at(0));
+        return postfix;
     }
-    for (const auto &token : infixToPostfix(subVector(tokens, i))) postfix.push_back(token);
+    const int i = precedence(tokens);
+    const Token& op = tokens.at(i);
+    postfix = infixToPostfix(subVector(tokens, 0, i));
+    for (const auto &token : infixToPostfix(subVector(tokens, i + 1))) postfix.push_back(token);
+    postfix.push_back(op);
     return postfix;
 }
 
 // Evaluation
 
+double evalPostfix(ArrayStack<Token>& tokens) {
+    if (tokens.empty()) return 0;
+    Token top = tokens.pop();
+    if (isNumber(top)) {
+        int num = 0;
+        for (const auto c : top.value) {
+            num*=10;
+            num+=(c-'0');
+        }
+        return num;
+    }
+    double num1 = evalPostfix(tokens);
+    double num2 = evalPostfix(tokens);
+    if (isOperator(top)) {
+        switch (top.value[0]) {
+            case '+':
+                return num2 + num1;
+            case '-':
+                return num2 - num1;
+            case '*':
+                return num2 * num1;
+            case '/':
+                return num2 / num1;
+            default:
+                cout<<"unexpected operation "<<top.value<<endl;
+        }
+    }
+    return -1;
+}
+
 double evalPostfix(const vector<Token>& tokens) {
-    ArrayStack<double> stack;
-    // TODO
-    return 0.0;
+    if (tokens.empty()) return 0;
+    ArrayStack<Token> expression = ArrayStack<Token>();
+    for (auto const &token : tokens) expression.push(token);
+    return evalPostfix(expression);
 }
 
 // Tokenizer
@@ -164,7 +190,7 @@ vector<Token> tokenize(const string& line) {
             }
             tokens.push_back(Token("("));
         }else if (line[i] == ')') tokens.push_back(Token(")"));
-        else cout << "Error at: " << line.substr(i) << "\n";
+        else cout << "Unknown token: " << line.substr(i) << "\n";
         i++;
     }
     return tokens;
@@ -176,9 +202,7 @@ int main() {
     string line;
     getline(cin, line);
 
-    vector<Token> tokens = tokenize(line);
-
-    if (isValidPostfix(tokens)) {
+    if (vector<Token> tokens = tokenize(line); isValidPostfix(tokens)) {
         cout << "FORMAT: POSTFIX\n";
         cout << "RESULT: " << evalPostfix(tokens) << "\n";
     }
@@ -195,6 +219,5 @@ int main() {
         cout << "FORMAT: NEITHER\n";
         cout << "ERROR: invalid expression\n";
     }
-
     return 0;
 }
