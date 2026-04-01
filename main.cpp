@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <unordered_map>
 #include <cctype>
+#include <cmath>
 
 #include "ArrayStack.h"
 
@@ -24,6 +24,12 @@ bool isOperator(const char s) {
 
 bool isOperator(const Token &t) {
     return t.value.length() == 1 && isOperator(t.value[0]);
+}
+
+int toNumber(const Token &t) {
+    int result = 0;
+    for (const auto c : t.value) result = result * 10 + c - '0';
+    return result;
 }
 
 bool isNumber(const string &s) {
@@ -59,12 +65,12 @@ int precedence(const vector<Token>& tokens) {
     }
     if (priority != 0) return -1;
     for (int p = 0; p <= depth; p++) {
-        for (int i = 0; i < tokens.size(); i++) {
+        for (int i = tokens.size() - 1; i >= 0; i--) {
             if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == '(') priority++;
             else if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == ')') priority--;
             if (isOperator(tokens.at(i)) && priority == p && (tokens.at(i).value[0] == '+' || tokens.at(i).value[0] == '-')) return i;
         }
-        for (int i = 0; i < tokens.size(); i++) {
+        for (int i = tokens.size() - 1; i >= 0; i--) {
             if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == '(') priority++;
             else if (tokens.at(i).value.length() == 1 && tokens.at(i).value[0] == ')') priority--;
             if (isOperator(tokens.at(i)) && priority == p && (tokens.at(i).value[0] == '*' || tokens.at(i).value[0] == '/')) return i;
@@ -105,17 +111,28 @@ bool isValidInfix(const vector<Token>& tokens) {
             if (priority < 0) return false;
         }else return false;
     }
-    return isOp;
+    return isOp && priority == 0;
 }
 
 // Conversion
 
-vector<Token> infixToPostfix(vector<Token>& tokens) {
+vector<Token> infixToPostfix(const vector<Token>& tokens) {
     auto postfix = vector<Token>();
     if (tokens.empty()) return postfix;
-    while (tokens.at(0).value[0] == '(' && tokens.at(tokens.size() - 1).value[0] == ')') {
-        tokens = subVector(tokens, 1, tokens.size() - 1);
+    int depth = 0;
+    int priority = 0;
+    for (const auto &token : tokens) {
+        if (token.value.length() == 1 && token.value[0] == '(') {
+            priority++;
+            depth++;
+        }
+        else if (token.value.length() == 1 && token.value[0] == ')') priority--;
+        else if (priority == 0) {
+            depth = 0;
+            break;
+        }
     }
+    if (depth > 0) return infixToPostfix(subVector(tokens, 1, tokens.size() - 1));
     if (tokens.empty()) return postfix;
     if (tokens.size() == 1) {
         postfix.push_back(tokens.at(0));
@@ -131,41 +148,36 @@ vector<Token> infixToPostfix(vector<Token>& tokens) {
 
 // Evaluation
 
-double evalPostfix(ArrayStack<Token>& tokens) {
-    if (tokens.empty()) return 0;
-    Token top = tokens.pop();
-    if (isNumber(top)) {
-        int num = 0;
-        for (const auto c : top.value) {
-            num*=10;
-            num+=(c-'0');
-        }
-        return num;
-    }
-    double num1 = evalPostfix(tokens);
-    double num2 = evalPostfix(tokens);
-    if (isOperator(top)) {
-        switch (top.value[0]) {
-            case '+':
-                return num2 + num1;
-            case '-':
-                return num2 - num1;
-            case '*':
-                return num2 * num1;
-            case '/':
-                return num2 / num1;
-            default:
-                cout<<"unexpected operation "<<top.value<<endl;
-        }
-    }
-    return -1;
-}
-
 double evalPostfix(const vector<Token>& tokens) {
     if (tokens.empty()) return 0;
-    ArrayStack<Token> expression = ArrayStack<Token>();
-    for (auto const &token : tokens) expression.push(token);
-    return evalPostfix(expression);
+    auto operations = ArrayStack<char>();
+    auto numbers = ArrayStack<double>();
+    for (const auto &t : tokens) {
+        if (isOperator(t)) operations.push(t.value[0]);
+        else if (isNumber(t)) numbers.push(toNumber(t));
+        if (!operations.empty() && numbers.size() >= 2) {
+            const double num1 = numbers.pop();
+            const double num2 = numbers.pop();
+            switch (operations.pop()) {
+                case '+':
+                    numbers.push(num2 + num1);
+                    break;
+                case '-':
+                    numbers.push(num2 - num1);
+                    break;
+                case '*':
+                    numbers.push(num2 * num1);
+                    break;
+                case '/':
+                    if (num1 == 0) throw runtime_error("Error: Division by 0");
+                    numbers.push(num2 / num1);
+                    break;
+                default:
+                    cout<<"unexpected operation"<<endl;
+            }
+        }
+    }
+    return numbers.pop();
 }
 
 // Tokenizer
@@ -175,21 +187,21 @@ vector<Token> tokenize(const string& line) {
     int i = 0;
     while (i < line.length()) {
         if (isspace(line[i]));
-        else if (isOperator(line[i])) tokens.push_back(Token(line.substr(i, 1)));
+        else if (isOperator(line[i])) tokens.emplace_back(line.substr(i, 1));
         else if (isdigit(line[i])) {
             int j = 1;
             while (line[i + j] != ' ' && i + j < line.length()) j++;
-            if (!tokens.empty() && (tokens.at(tokens.size() - 1)).value == ")") {
-                tokens.push_back(Token("*"));
+            if (!tokens.empty() && tokens.at(tokens.size() - 1).value == ")") {
+                tokens.emplace_back("*");
             }
-            tokens.push_back(Token(line.substr(i, j)));
+            tokens.emplace_back(line.substr(i, j));
             i+=j-1;
         }else if (line[i] == '(') {
-            if (!tokens.empty() && isNumber(tokens.at(tokens.size() - 1))) {
-                tokens.push_back(Token("*"));
+            if (!tokens.empty() && (isNumber(tokens.at(tokens.size() - 1)) || tokens.at(tokens.size() - 1).value == ")")) {
+                tokens.emplace_back("*");
             }
-            tokens.push_back(Token("("));
-        }else if (line[i] == ')') tokens.push_back(Token(")"));
+            tokens.emplace_back("(");
+        }else if (line[i] == ')') tokens.emplace_back(")");
         else cout << "Unknown token: " << line.substr(i) << "\n";
         i++;
     }
@@ -201,13 +213,31 @@ vector<Token> tokenize(const string& line) {
 int main() {
     string line;
     getline(cin, line);
-
-    if (vector<Token> tokens = tokenize(line); isValidPostfix(tokens)) {
+    if (vector<Token> tokens = tokenize(line); tokens.empty() || (tokens.size() == 1 && isNumber(tokens.at(0)))) {
+        switch (rand()%2) { //randomness not random
+            case 0: {
+                const vector<Token> postfix = infixToPostfix(tokens);
+                cout << "FORMAT: INFIX\n";
+                cout << "POSTFIX: ";
+                for (const auto& t : postfix) {
+                    cout << t.value << " ";
+                }
+                cout << "\n";
+                cout << "RESULT: " << evalPostfix(postfix) << "\n";
+                break;
+            }
+            default:
+                cout << "FORMAT: POSTFIX\n";
+                cout << "RESULT: " << evalPostfix(tokens) << "\n";
+                break;
+        }
+    }
+    else if (isValidPostfix(tokens)) {
         cout << "FORMAT: POSTFIX\n";
         cout << "RESULT: " << evalPostfix(tokens) << "\n";
     }
     else if (isValidInfix(tokens)) {
-        vector<Token> postfix = infixToPostfix(tokens);
+        const vector<Token> postfix = infixToPostfix(tokens);
         cout << "FORMAT: INFIX\n";
         cout << "POSTFIX: ";
         for (const auto& t : postfix) {
